@@ -16,7 +16,7 @@ type PgDB struct {
 	pool *pgxpool.Pool
 }
 
-func NewPostgresConnection(cfg *config.ConfigManager) PgDB {
+func NewPostgresConnection(cfg config.CfgManager) PgDB {
 	ctx := context.Background()
 	dbUrl, err := cfg.GetValue(ctx, "DATABASE_URL")
 	if err != nil {
