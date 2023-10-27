@@ -38,12 +38,12 @@ jobs:
         id: gitversion
         uses: gittools/actions/gitversion/execute@v0
 
-      # - uses: actions-ecosystem/action-get-latest-tag@v1
-      #   id: get-latest-tag
+      - uses: actions-ecosystem/action-get-latest-tag@v1
+        id: get-latest-tag
 
-      # - uses: actions-ecosystem/action-push-tag@v1
-      #   with:
-      #     tag: v${{ steps.gitversion.outputs.semVer }}
+      - uses: actions-ecosystem/action-push-tag@v1
+        with:
+          tag: v${{ steps.gitversion.outputs.semVer }}
 
       - name: Create Release
         id: create_release
