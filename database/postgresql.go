@@ -5,11 +5,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/Hoomanfr/golib/config"
 	pgxuuid "github.com/jackc/pgx-gofrs-uuid"
 	pgxdecimal "github.com/jackc/pgx-shopspring-decimal"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/thumperq/golib/config"
 )
 
 type PgDB struct {

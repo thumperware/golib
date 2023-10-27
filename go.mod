@@ -1,4 +1,4 @@
-module github.com/Hoomanfr/golib
+module github.com/thumperq/golib
 
 go 1.20
 

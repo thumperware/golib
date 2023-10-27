@@ -10,8 +10,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Hoomanfr/golib/config"
 	"github.com/gin-gonic/gin"
+	"github.com/thumperq/golib/config"
 )
 
 type ApiServer struct {

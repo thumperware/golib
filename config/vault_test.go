@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Hoomanfr/golib/config"
 	"github.com/stretchr/testify/require"
+	"github.com/thumperq/golib/config"
 )
 
 func TestNewConfigManager(t *testing.T) {
