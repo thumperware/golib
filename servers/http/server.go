@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/thumperq/golib/config"
 )
@@ -24,6 +25,18 @@ type ApiServer struct {
 
 func (srv *ApiServer) Initialize() error {
 	srv.Engine = gin.New()
+	srv.Engine.GET("/health-check", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "ok",
+		})
+	})
+
+	config := cors.DefaultConfig()
+	config.AllowOrigins = []string{"*"} //  we should adjust it in production env
+	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
+	config.AllowHeaders = []string{"Authorization", "Content-Type"}
+	srv.Engine.Use(cors.New(config))
+
 	srv.interrupt = make(chan os.Signal, 1)
 	signal.Notify(srv.interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	return nil

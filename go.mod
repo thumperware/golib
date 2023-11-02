@@ -3,6 +3,7 @@ module github.com/thumperq/golib
 go 1.21
 
 require (
+	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.0
 	github.com/hashicorp/vault/api v1.9.1
 	github.com/jackc/pgx-gofrs-uuid v0.0.0-20230224015001-1d428863c2e2
