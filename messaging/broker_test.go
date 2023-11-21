@@ -39,7 +39,6 @@ func TestPublishAndSubscribe(t *testing.T) {
 }
 
 func startNatsServer() *server.Server {
-	// options to create nats server
 	opts := &server.Options{
 		ServerName:     "local_nats_server",
 		Host:           "localhost",
