@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/nats-io/nats.go"
+	"github.com/thumperq/golib/config"
 	"github.com/thumperq/golib/logging"
 )
 
@@ -18,15 +19,16 @@ type Broker struct {
 	Service    string
 }
 
-func NewBroker(urls string, domain string, service string) (*Broker, error) {
-	if urls == "" {
-		return nil, errors.New("urls is empty")
-	}
+func NewBroker(cfg config.CfgManager, domain string, service string) (*Broker, error) {
 	if domain == "" {
 		return nil, errors.New("domain is empty")
 	}
 	if service == "" {
 		return nil, errors.New("service is empty")
+	}
+	urls, err := cfg.GetValue(context.Background(), "NATS_URLS")
+	if err != nil {
+		return nil, err
 	}
 	return &Broker{
 		urls:    urls,

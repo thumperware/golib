@@ -15,11 +15,24 @@ type order struct {
 	OrderType string `json:"orderType"`
 }
 
+type mockCfgManager struct {
+	Value string
+}
+
+func (m *mockCfgManager) GetValue(ctx context.Context, key string) (string, error) {
+	return m.Value, nil
+}
+
+func (m *mockCfgManager) GetValueOfDomainService(ctx context.Context, domain string, service string, key string) (string, error) {
+	return m.Value, nil
+}
+
 func TestPublishAndSubscribe(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ns := startNatsServer()
-	broker, err := messaging.NewBroker(ns.ClientURL(), "wms", "ordering")
+	mockCfgManager := &mockCfgManager{Value: ns.ClientURL()}
+	broker, err := messaging.NewBroker(mockCfgManager, "wms", "ordering")
 	require.NoError(t, err)
 	err = broker.Connect()
 	require.NoError(t, err)
