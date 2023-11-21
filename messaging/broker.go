@@ -85,7 +85,12 @@ func (s *Subscriber[T]) SubscribeWithSubject(ctx context.Context, subject string
 		for {
 			select {
 			case <-ctx.Done():
-				sub.Unsubscribe()
+				err := sub.Unsubscribe()
+				if err != nil {
+					logging.TraceLogger(ctx).
+						Err(err).
+						Msgf("failed to unsubscribe from subject %s", subject)
+				}
 			case msg := <-msgs:
 				var data T
 				err := json.Unmarshal(msg.Data, &data)
