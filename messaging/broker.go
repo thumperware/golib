@@ -75,7 +75,7 @@ func NewSubscriber[T any](broker *Broker) *Subscriber[T] {
 	}
 }
 
-func (s *Subscriber[T]) SubscribeWithSubject(ctx context.Context, subject string, handler func(data T) error) error {
+func (s *Subscriber[T]) SubscribeWithSubject(ctx context.Context, subject string, handler func(ctx context.Context, data T) error) error {
 	msgs := make(chan *nats.Msg)
 	sub, err := s.broker.Connection.QueueSubscribeSyncWithChan(subject, s.queueName, msgs)
 	if err != nil {
@@ -88,13 +88,13 @@ func (s *Subscriber[T]) SubscribeWithSubject(ctx context.Context, subject string
 				sub.Unsubscribe()
 			case msg := <-msgs:
 				var data T
-				err := json.Unmarshal(msg.Data, data)
+				err := json.Unmarshal(msg.Data, &data)
 				if err != nil {
 					logging.TraceLogger(ctx).
 						Err(err).
 						Msgf("failed to unmarshal message with subject %s", msg.Subject)
 				}
-				err = handler(data)
+				err = handler(ctx, data)
 				if err != nil {
 					logging.TraceLogger(ctx).
 						Err(err).
@@ -106,6 +106,6 @@ func (s *Subscriber[T]) SubscribeWithSubject(ctx context.Context, subject string
 	return nil
 }
 
-func (s *Subscriber[T]) Subscribe(ctx context.Context, domain string, service string, topic string, handler func(data T) error) error {
+func (s *Subscriber[T]) Subscribe(ctx context.Context, domain string, service string, topic string, handler func(ctx context.Context, data T) error) error {
 	return s.SubscribeWithSubject(ctx, fmt.Sprintf("%s.%s.%s", domain, service, topic), handler)
 }
