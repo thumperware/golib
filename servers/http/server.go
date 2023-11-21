@@ -12,15 +12,13 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	"github.com/thumperq/golib/config"
 )
 
 type ApiServer struct {
-	HttpPort      uint16
-	Engine        *gin.Engine
-	ConfigManager config.CfgManager
-	interrupt     chan os.Signal
-	httpServer    *http.Server
+	HttpPort   uint16
+	Engine     *gin.Engine
+	interrupt  chan os.Signal
+	httpServer *http.Server
 }
 
 func (srv *ApiServer) Initialize() error {
@@ -71,11 +69,9 @@ func (srv *ApiServer) Stop() int {
 
 func ListenAndServe(callback func(*ApiServer)) <-chan int {
 	var httpPort uint16 = 8080
-	configManager := config.NewConfigManager()
 	exitCode := make(chan int, 1)
 	apiServer := ApiServer{
-		HttpPort:      httpPort,
-		ConfigManager: configManager,
+		HttpPort: httpPort,
 	}
 	err := apiServer.Initialize()
 	if err != nil {
