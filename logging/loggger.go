@@ -18,6 +18,7 @@ func SetupLogging() error {
 	zerolog.TimestampFunc = func() time.Time {
 		return time.Now().UTC()
 	}
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.With().Caller().Logger()
 	if gin.IsDebugging() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
