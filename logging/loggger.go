@@ -28,6 +28,13 @@ func SetupLogging() error {
 				NoColor: false,
 			},
 		)
+	} else {
+		log.Logger = log.Output(
+			zerolog.ConsoleWriter{
+				Out:     os.Stdout,
+				NoColor: false,
+			},
+		)
 	}
 	return nil
 }
