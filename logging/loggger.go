@@ -13,13 +13,16 @@ import (
 )
 
 // SetupLogging sets up logging for the application this method should be used when bootstrapping the application
-func SetupLogging() error {
+func SetupLogging() {
 	zerolog.TimeFieldFormat = time.RFC3339Nano
 	zerolog.TimestampFunc = func() time.Time {
 		return time.Now().UTC()
 	}
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	log.Logger = log.With().Caller().Logger()
+	log.Logger = log.With().Caller().Logger().Output(zerolog.ConsoleWriter{
+		Out:     os.Stdout,
+		NoColor: false,
+	})
 	if gin.IsDebugging() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		log.Logger = log.Output(
@@ -28,15 +31,7 @@ func SetupLogging() error {
 				NoColor: false,
 			},
 		)
-	} else {
-		log.Logger = log.Output(
-			zerolog.ConsoleWriter{
-				Out:     os.Stdout,
-				NoColor: false,
-			},
-		)
 	}
-	return nil
 }
 
 // TraceLogger returns a logger with trace information this method should be used for logging in the application
