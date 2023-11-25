@@ -19,10 +19,7 @@ func SetupLogging() {
 		return time.Now().UTC()
 	}
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	log.Logger = log.With().Caller().Logger().Output(zerolog.ConsoleWriter{
-		Out:     os.Stdin,
-		NoColor: false,
-	})
+	log.Logger = log.With().Caller().Logger()
 	if gin.IsDebugging() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 		log.Logger = log.Output(
