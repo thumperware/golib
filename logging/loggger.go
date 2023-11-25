@@ -3,10 +3,8 @@ package logging
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	oteltrc "go.opentelemetry.io/otel/trace"
@@ -20,15 +18,15 @@ func SetupLogging() {
 	}
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.With().Caller().Logger()
-	if gin.IsDebugging() {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		log.Logger = log.Output(
-			zerolog.ConsoleWriter{
-				Out:     os.Stderr,
-				NoColor: false,
-			},
-		)
-	}
+	// if gin.IsDebugging() {
+	// 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	// 	log.Logger = log.Output(
+	// 		zerolog.ConsoleWriter{
+	// 			Out:     os.Stderr,
+	// 			NoColor: false,
+	// 		},
+	// 	)
+	// }
 }
 
 // TraceLogger returns a logger with trace information this method should be used for logging in the application
