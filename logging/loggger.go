@@ -18,15 +18,6 @@ func SetupLogging() {
 	}
 	zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	log.Logger = log.With().Caller().Logger()
-	// if gin.IsDebugging() {
-	// 	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	// 	log.Logger = log.Output(
-	// 		zerolog.ConsoleWriter{
-	// 			Out:     os.Stderr,
-	// 			NoColor: false,
-	// 		},
-	// 	)
-	// }
 }
 
 // TraceLogger returns a logger with trace information this method should be used for logging in the application
