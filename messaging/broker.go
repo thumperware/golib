@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/nats-io/nats.go"
@@ -15,6 +16,7 @@ import (
 type Broker struct {
 	urls       string
 	Connection *nats.Conn
+	Stream     nats.JetStreamContext
 	Domain     string
 	Service    string
 }
@@ -35,6 +37,35 @@ func NewBroker(cfg config.CfgManager, domain string, service string) (*Broker, e
 		Domain:  domain,
 		Service: service,
 	}, nil
+}
+
+func (b *Broker) WithStream(topics []string) error {
+	if len(topics) <= 0 {
+		return errors.New("topics is empty")
+	}
+	domainTopics := make([]string, len(topics))
+	for _, t := range topics {
+		domainTopics = append(domainTopics, fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, t))
+	}
+	if b.Connection == nil {
+		err := b.Connect()
+		if err != nil {
+			return err
+		}
+	}
+	js, err := b.Connection.JetStream(nats.PublishAsyncMaxPending(256))
+	if err != nil {
+		return err
+	}
+	b.Stream = js
+	_, err = b.Stream.AddStream(&nats.StreamConfig{
+		Name:     fmt.Sprintf("%s.%s", b.Domain, b.Service),
+		Subjects: domainTopics,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (b *Broker) Connect() error {
@@ -64,22 +95,35 @@ func (b *Broker) Publish(topic string, data any) error {
 	return b.Connection.Publish(fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, topic), dataJson)
 }
 
+func (b *Broker) PublishStream(topic string, data any) error {
+	dataJson, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	_, err = b.Stream.Publish(fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, topic), dataJson)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 type Subscriber[T any] struct {
-	queueName string
-	broker    *Broker
+	subscriberName string
+	broker         *Broker
 }
 
 func NewSubscriber[T any](broker *Broker) *Subscriber[T] {
-	queueName := fmt.Sprintf("%s.%s", broker.Domain, broker.Service)
 	return &Subscriber[T]{
-		queueName: queueName,
-		broker:    broker,
+		subscriberName: fmt.Sprintf("%s-%s", broker.Domain, broker.Service),
+		broker:         broker,
 	}
 }
 
-func (s *Subscriber[T]) SubscribeWithSubject(ctx context.Context, subject string, handler func(ctx context.Context, data T) error) error {
+func (s *Subscriber[T]) Subscribe(ctx context.Context, domain string, service string, topic string, handler func(ctx context.Context, data T) error) error {
 	msgs := make(chan *nats.Msg)
-	sub, err := s.broker.Connection.QueueSubscribeSyncWithChan(subject, s.queueName, msgs)
+	subject := fmt.Sprintf("%s.%s.%s", domain, service, topic)
+	queueName := fmt.Sprintf("%s-%s", s.subscriberName, strings.ReplaceAll(subject, ".", "-"))
+	sub, err := s.broker.Connection.QueueSubscribeSyncWithChan(subject, queueName, msgs)
 	if err != nil {
 		return err
 	}
@@ -93,6 +137,7 @@ func (s *Subscriber[T]) SubscribeWithSubject(ctx context.Context, subject string
 						Err(err).
 						Msgf("failed to unsubscribe from subject %s", subject)
 				}
+				return
 			case msg := <-msgs:
 				var data T
 				err := json.Unmarshal(msg.Data, &data)
@@ -100,6 +145,7 @@ func (s *Subscriber[T]) SubscribeWithSubject(ctx context.Context, subject string
 					logging.TraceLogger(ctx).
 						Err(err).
 						Msgf("failed to unmarshal message with subject %s", msg.Subject)
+					continue
 				}
 				err = handler(ctx, data)
 				if err != nil {
@@ -113,6 +159,48 @@ func (s *Subscriber[T]) SubscribeWithSubject(ctx context.Context, subject string
 	return nil
 }
 
-func (s *Subscriber[T]) Subscribe(ctx context.Context, domain string, service string, topic string, handler func(ctx context.Context, data T) error) error {
-	return s.SubscribeWithSubject(ctx, fmt.Sprintf("%s.%s.%s", domain, service, topic), handler)
+func (s *Subscriber[T]) SubscribeStream(ctx context.Context, domain string, service string, topic string, handler func(ctx context.Context, data T) error) error {
+	subject := fmt.Sprintf("%s.%s.%s", domain, service, topic)
+	queueName := fmt.Sprintf("%s-%s", s.subscriberName, strings.ReplaceAll(subject, ".", "-"))
+	sub, err := s.broker.Stream.PullSubscribe(subject, queueName, nats.PullMaxWaiting(128))
+	if err != nil {
+		return err
+	}
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				err := sub.Unsubscribe()
+				if err != nil {
+					logging.TraceLogger(ctx).
+						Err(err).
+						Msgf("failed to unsubscribe from subject %s", subject)
+				}
+				return
+			default:
+				msgs, _ := sub.Fetch(10, nats.Context(ctx))
+				for _, msg := range msgs {
+					var data T
+					err := json.Unmarshal(msg.Data, &data)
+					if err != nil {
+						logging.TraceLogger(ctx).
+							Err(err).
+							Msgf("failed to unmarshal stream message with subject %s", msg.Subject)
+						msg.Nak()
+						continue
+					}
+					err = handler(ctx, data)
+					if err != nil {
+						logging.TraceLogger(ctx).
+							Err(err).
+							Msgf("stream handler error for subject %s", msg.Subject)
+						msg.Nak()
+					} else {
+						msg.Ack()
+					}
+				}
+			}
+		}
+	}()
+	return nil
 }
