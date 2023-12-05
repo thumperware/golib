@@ -47,19 +47,22 @@ func TestPublishAndSubscribe(t *testing.T) {
 	err = broker.Connect()
 	require.NoError(t, err)
 	subscriber := messaging.NewSubscriber[orderCreated](broker)
-	subscriber.Subscribe(ctx, "wms", "ordering", "order", func(ctx context.Context, data orderCreated) error {
+	err = subscriber.Subscribe(ctx, "wms", "ordering", "order", func(ctx context.Context, data orderCreated) error {
 		require.Equal(t, "123", data.OrderId)
 		require.Equal(t, "normal", data.OrderType)
 		cancel()
-		broker.Disconnect()
+		err := broker.Disconnect()
+		require.NoError(t, err)
 		ns.Shutdown()
 		return nil
 	})
-	broker.Publish("order", &orderCreated{
+	require.NoError(t, err)
+	err = broker.Publish("order", &orderCreated{
 		Name:      "orderCreated",
 		OrderId:   "123",
 		OrderType: "normal",
 	})
+	require.NoError(t, err)
 	ns.WaitForShutdown()
 }
 
@@ -73,18 +76,21 @@ func TestStreamPublishAndSubscribe(t *testing.T) {
 	err = broker.WithStream([]string{"order"})
 	require.NoError(t, err)
 	subscriber := messaging.NewSubscriber[orderCreated](broker)
-	subscriber.SubscribeStream(ctx, "wms", "ordering", "order", func(ctx context.Context, data orderCreated) error {
+	err = subscriber.SubscribeStream(ctx, "wms", "ordering", "order", func(ctx context.Context, data orderCreated) error {
 		require.Equal(t, "orderCreated", data.Name)
 		require.Equal(t, "123", data.OrderId)
 		require.Equal(t, "normal", data.OrderType)
-		broker.Disconnect()
+		err := broker.Disconnect()
+		require.NoError(t, err)
 		ns.Shutdown()
 		return nil
 	})
-	broker.PublishStream("order", &orderCreated{
+	require.NoError(t, err)
+	err = broker.PublishStream("order", &orderCreated{
 		Name:      "orderCreated",
 		OrderId:   "123",
 		OrderType: "normal",
 	})
+	require.NoError(t, err)
 	ns.WaitForShutdown()
 }
