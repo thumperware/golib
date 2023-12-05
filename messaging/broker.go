@@ -43,7 +43,7 @@ func (b *Broker) WithStream(topics []string) error {
 	if len(topics) <= 0 {
 		return errors.New("topics is empty")
 	}
-	domainTopics := make([]string, len(topics))
+	domainTopics := []string{}
 	for _, t := range topics {
 		domainTopics = append(domainTopics, fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, t))
 	}
@@ -59,7 +59,7 @@ func (b *Broker) WithStream(topics []string) error {
 	}
 	b.Stream = js
 	_, err = b.Stream.AddStream(&nats.StreamConfig{
-		Name:     fmt.Sprintf("%s.%s", b.Domain, b.Service),
+		Name:     fmt.Sprintf("%s-%s", b.Domain, b.Service),
 		Subjects: domainTopics,
 	})
 	if err != nil {
@@ -174,7 +174,7 @@ func (s *Subscriber[T]) SubscribeStream(ctx context.Context, domain string, serv
 				if err != nil {
 					logging.TraceLogger(ctx).
 						Err(err).
-						Msgf("failed to unsubscribe from subject %s", subject)
+						Msgf("failed to unsubscribe from subject stream %s", subject)
 				}
 				return
 			default:
