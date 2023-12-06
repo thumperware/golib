@@ -186,7 +186,12 @@ func (s *Subscriber[T]) SubscribeStream(ctx context.Context, domain string, serv
 						logging.TraceLogger(ctx).
 							Err(err).
 							Msgf("failed to unmarshal stream message with subject %s", msg.Subject)
-						msg.Nak()
+						err := msg.Nak()
+						if err != nil {
+							logging.TraceLogger(ctx).
+								Err(err).
+								Msgf("ack error for subject %s", msg.Subject)
+						}
 						continue
 					}
 					err = handler(ctx, data)
@@ -194,9 +199,19 @@ func (s *Subscriber[T]) SubscribeStream(ctx context.Context, domain string, serv
 						logging.TraceLogger(ctx).
 							Err(err).
 							Msgf("stream handler error for subject %s", msg.Subject)
-						msg.Nak()
+						err := msg.Nak()
+						if err != nil {
+							logging.TraceLogger(ctx).
+								Err(err).
+								Msgf("ack error for subject %s", msg.Subject)
+						}
 					} else {
-						msg.Ack()
+						err := msg.Ack()
+						if err != nil {
+							logging.TraceLogger(ctx).
+								Err(err).
+								Msgf("ack error for subject %s", msg.Subject)
+						}
 					}
 				}
 			}
