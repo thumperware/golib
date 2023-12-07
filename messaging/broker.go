@@ -13,6 +13,15 @@ import (
 	"github.com/thumperq/golib/logging"
 )
 
+type Event interface {
+	Name() string
+}
+
+type Message struct {
+	Name string `json:"name"`
+	Data []byte `json:"data"`
+}
+
 type Broker struct {
 	urls       string
 	Connection *nats.Conn
@@ -81,45 +90,67 @@ func (b *Broker) Disconnect() error {
 	return b.Connection.Drain()
 }
 
-func (b *Broker) Publish(topic string, data any) error {
+func (b *Broker) Publish(topic string, data Event) error {
 	if topic == "" {
 		return errors.New("publish topic is empty")
 	}
 	if data == nil {
 		return errors.New("publish data is nil")
 	}
-	dataJson, err := json.Marshal(data)
+	dataBytes, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-	return b.Connection.Publish(fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, topic), dataJson)
+	msg := &Message{
+		Name: data.Name(),
+		Data: dataBytes,
+	}
+	msgJson, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	return b.Connection.Publish(fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, topic), msgJson)
 }
 
-func (b *Broker) PublishStream(topic string, data any) error {
-	dataJson, err := json.Marshal(data)
+func (b *Broker) PublishStream(topic string, data Event) error {
+	if topic == "" {
+		return errors.New("publish stream topic is empty")
+	}
+	if data == nil {
+		return errors.New("publish stream data is nil")
+	}
+	dataBytes, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
-	_, err = b.Stream.Publish(fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, topic), dataJson)
+	msg := &Message{
+		Name: data.Name(),
+		Data: dataBytes,
+	}
+	msgJson, err := json.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	_, err = b.Stream.Publish(fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, topic), msgJson)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-type Subscriber[T any] struct {
+type Subscriber struct {
 	subscriberName string
 	broker         *Broker
 }
 
-func NewSubscriber[T any](broker *Broker) *Subscriber[T] {
-	return &Subscriber[T]{
+func NewSubscriber(broker *Broker) *Subscriber {
+	return &Subscriber{
 		subscriberName: fmt.Sprintf("%s-%s", broker.Domain, broker.Service),
 		broker:         broker,
 	}
 }
 
-func (s *Subscriber[T]) Subscribe(ctx context.Context, domain string, service string, topic string, handler func(ctx context.Context, data T) error) error {
+func (s *Subscriber) Subscribe(ctx context.Context, domain string, service string, topic string, handler func(ctx context.Context, msg Message) error) error {
 	msgs := make(chan *nats.Msg)
 	subject := fmt.Sprintf("%s.%s.%s", domain, service, topic)
 	queueName := fmt.Sprintf("%s-%s", s.subscriberName, strings.ReplaceAll(subject, ".", "-"))
@@ -139,7 +170,7 @@ func (s *Subscriber[T]) Subscribe(ctx context.Context, domain string, service st
 				}
 				return
 			case msg := <-msgs:
-				var data T
+				var data Message
 				err := json.Unmarshal(msg.Data, &data)
 				if err != nil {
 					logging.TraceLogger(ctx).
@@ -159,7 +190,7 @@ func (s *Subscriber[T]) Subscribe(ctx context.Context, domain string, service st
 	return nil
 }
 
-func (s *Subscriber[T]) SubscribeStream(ctx context.Context, domain string, service string, topic string, handler func(ctx context.Context, data T) error) error {
+func (s *Subscriber) SubscribeStream(ctx context.Context, domain string, service string, topic string, handler func(ctx context.Context, msg Message) error) error {
 	subject := fmt.Sprintf("%s.%s.%s", domain, service, topic)
 	queueName := fmt.Sprintf("%s-%s", s.subscriberName, strings.ReplaceAll(subject, ".", "-"))
 	sub, err := s.broker.Stream.PullSubscribe(subject, queueName, nats.PullMaxWaiting(128))
@@ -180,7 +211,7 @@ func (s *Subscriber[T]) SubscribeStream(ctx context.Context, domain string, serv
 			default:
 				msgs, _ := sub.Fetch(10, nats.Context(ctx))
 				for _, msg := range msgs {
-					var data T
+					var data Message
 					err := json.Unmarshal(msg.Data, &data)
 					if err != nil {
 						logging.TraceLogger(ctx).

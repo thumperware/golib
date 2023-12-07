@@ -2,18 +2,24 @@ package messaging_test
 
 import (
 	"context"
+	"encoding/json"
+	"testing"
+
 	"github.com/nats-io/nats-server/v2/server"
 	natsserver "github.com/nats-io/nats-server/v2/test"
-	"testing"
 
 	"github.com/stretchr/testify/require"
 	"github.com/thumperq/golib/messaging"
 )
 
 type orderCreated struct {
-	Name      string `json:"name"`
+	EventName string `json:"name"`
 	OrderId   string `json:"orderId"`
 	OrderType string `json:"orderType"`
+}
+
+func (o orderCreated) Name() string {
+	return o.EventName
 }
 
 type mockCfgManager struct {
@@ -46,19 +52,23 @@ func TestPublishAndSubscribe(t *testing.T) {
 	require.NoError(t, err)
 	err = broker.Connect()
 	require.NoError(t, err)
-	subscriber := messaging.NewSubscriber[orderCreated](broker)
-	err = subscriber.Subscribe(ctx, "wms", "ordering", "order", func(ctx context.Context, data orderCreated) error {
-		require.Equal(t, "123", data.OrderId)
-		require.Equal(t, "normal", data.OrderType)
+	subscriber := messaging.NewSubscriber(broker)
+	err = subscriber.Subscribe(ctx, "wms", "ordering", "order", func(ctx context.Context, msg messaging.Message) error {
+		require.Equal(t, "orderCreated", msg.Name)
+		var event orderCreated
+		err := json.Unmarshal(msg.Data, &event)
+		require.NoError(t, err)
+		require.Equal(t, "123", event.OrderId)
+		require.Equal(t, "normal", event.OrderType)
 		cancel()
-		err := broker.Disconnect()
+		err = broker.Disconnect()
 		require.NoError(t, err)
 		ns.Shutdown()
 		return nil
 	})
 	require.NoError(t, err)
 	err = broker.Publish("order", &orderCreated{
-		Name:      "orderCreated",
+		EventName: "orderCreated",
 		OrderId:   "123",
 		OrderType: "normal",
 	})
@@ -75,19 +85,22 @@ func TestStreamPublishAndSubscribe(t *testing.T) {
 	require.NoError(t, err)
 	err = broker.WithStream([]string{"order"})
 	require.NoError(t, err)
-	subscriber := messaging.NewSubscriber[orderCreated](broker)
-	err = subscriber.SubscribeStream(ctx, "wms", "ordering", "order", func(ctx context.Context, data orderCreated) error {
-		require.Equal(t, "orderCreated", data.Name)
-		require.Equal(t, "123", data.OrderId)
-		require.Equal(t, "normal", data.OrderType)
-		err := broker.Disconnect()
+	subscriber := messaging.NewSubscriber(broker)
+	err = subscriber.SubscribeStream(ctx, "wms", "ordering", "order", func(ctx context.Context, msg messaging.Message) error {
+		require.Equal(t, "orderCreated", msg.Name)
+		var event orderCreated
+		err := json.Unmarshal(msg.Data, &event)
+		require.NoError(t, err)
+		require.Equal(t, "123", event.OrderId)
+		require.Equal(t, "normal", event.OrderType)
+		err = broker.Disconnect()
 		require.NoError(t, err)
 		ns.Shutdown()
 		return nil
 	})
 	require.NoError(t, err)
 	err = broker.PublishStream("order", &orderCreated{
-		Name:      "orderCreated",
+		EventName: "orderCreated",
 		OrderId:   "123",
 		OrderType: "normal",
 	})
