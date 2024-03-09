@@ -23,7 +23,9 @@ type ApiServer struct {
 
 func (srv *ApiServer) Initialize() error {
 	srv.Engine = gin.New()
-	srv.Engine.GET("/health-check", func(c *gin.Context) {
+	domain := os.Getenv("DOMAIN")
+	service := os.Getenv("SERVICE")
+	srv.Engine.GET(fmt.Sprintf("/%s/%s/health-check", domain, service), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"status": "ok",
 		})
