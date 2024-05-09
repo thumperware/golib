@@ -13,18 +13,18 @@ import (
 )
 
 type PgDB struct {
-	pool *pgxpool.Pool
+	Pool *pgxpool.Pool
 }
 
-func NewPostgresConnection(cfg config.CfgManager) PgDB {
+func NewPostgresConnection(cfg config.CfgManager) (*PgDB, error) {
 	ctx := context.Background()
 	dbUrl, err := cfg.GetValue(ctx, "DATABASE_URL")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	dbcfg, err := pgxpool.ParseConfig(dbUrl)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	dbcfg.AfterConnect = func(ctx context.Context, conn *pgx.Conn) error {
 		pgxdecimal.Register(conn.TypeMap())
@@ -40,20 +40,20 @@ func NewPostgresConnection(cfg config.CfgManager) PgDB {
 		return true
 	}
 	connCtx, timeout := context.WithTimeout(ctx, time.Second*3)
-	conn, err := pgxpool.NewWithConfig(connCtx, dbcfg)
+	pool, err := pgxpool.NewWithConfig(connCtx, dbcfg)
 	defer timeout()
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return PgDB{conn}
+	return &PgDB{pool}, nil
 }
 
 func (db PgDB) WithTransaction(ctx context.Context, fn func(pgx.Tx) error) error {
-	if db.pool == nil {
+	if db.Pool == nil {
 		return errors.New("no_established_db_connection")
 	}
-	conn, err := db.pool.Acquire(ctx)
+	conn, err := db.Pool.Acquire(ctx)
 	if err != nil {
 		return err
 	}
@@ -74,10 +74,10 @@ func (db PgDB) WithTransaction(ctx context.Context, fn func(pgx.Tx) error) error
 }
 
 func (db PgDB) WithConnection(ctx context.Context, fn func(*pgxpool.Conn) error) error {
-	if db.pool == nil {
+	if db.Pool == nil {
 		return errors.New("no_established_db_connection")
 	}
-	conn, err := db.pool.Acquire(ctx)
+	conn, err := db.Pool.Acquire(ctx)
 	if err != nil {
 		return err
 	}

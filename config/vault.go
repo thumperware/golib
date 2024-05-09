@@ -22,7 +22,7 @@ type ConfigManager struct {
 	store       *vault.KVv2
 }
 
-func NewConfigManager() CfgManager {
+func NewConfigManager() (CfgManager, error) {
 	cfg := ConfigManager{
 		environment: os.Getenv("ENVIRONMENT"),
 		domain:      os.Getenv("DOMAIN"),
@@ -33,7 +33,7 @@ func NewConfigManager() CfgManager {
 	err := config.ConfigureTLS(&vault.TLSConfig{Insecure: true})
 
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	client, err := vault.NewClient(config)
@@ -48,7 +48,7 @@ func NewConfigManager() CfgManager {
 
 	store := client.KVv2("secrets")
 	cfg.store = store
-	return cfg
+	return cfg, nil
 }
 
 func (cfg ConfigManager) GetValue(ctx context.Context, key string) (string, error) {
