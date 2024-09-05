@@ -26,10 +26,12 @@ func NewEnv() (*Env, error) {
 		return nil, err
 	}
 
-	dbf, err := database.NewDBFactory(cfg)
+	dbFactory, err := database.NewDBFactory(cfg)
 	if err != nil {
 		return nil, err
 	}
+
+	database.Factory = dbFactory
 
 	domain := os.Getenv("DOMAIN")
 	service := os.Getenv("SERVICE")
@@ -40,10 +42,14 @@ func NewEnv() (*Env, error) {
 		return nil, err
 	}
 
+	appFactory := application.NewApplicationFactory(dbFactory, broker, cfg)
+
+	application.Factory = appFactory
+
 	return &Env{
 		broker:     broker,
-		AppFactory: application.NewApplicationFactory(dbf, broker, cfg),
-		DbFactory:  dbf,
+		AppFactory: appFactory,
+		DbFactory:  dbFactory,
 		Cfg:        cfg,
 	}, nil
 }
