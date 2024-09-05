@@ -7,7 +7,7 @@ type DbService interface {
 }
 
 type DbFactory interface {
-	Register(newDb func(...any) DbService)
+	Register(newDb func(...any) DbService) DbFactory
 	Get(name string) DbService
 }
 
@@ -27,9 +27,10 @@ func NewDBFactory(cfg config.CfgManager) (DbFactory, error) {
 	}, nil
 }
 
-func (dbf *DBFactory) Register(newDb func(...any) DbService) {
+func (dbf *DBFactory) Register(newDb func(...any) DbService) DbFactory {
 	db := newDb(dbf.pgDb)
 	dbf.dbs[db.Name()] = db
+	return dbf
 }
 
 func (dbf *DBFactory) Get(name string) DbService {

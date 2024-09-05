@@ -10,6 +10,7 @@ type AppService interface {
 }
 
 type AppFactory interface {
+	Register(newApp func(...any) AppService) AppFactory
 	DbFactory() database.DbFactory
 	Broker() *messaging.Broker
 }
@@ -27,9 +28,10 @@ func NewApplicationFactory(dbFactory database.DbFactory, broker *messaging.Broke
 	}
 }
 
-func (af *ApplicationFactory) Register(newApp func(...any) AppService) {
+func (af *ApplicationFactory) Register(newApp func(...any) AppService) AppFactory {
 	app := newApp(af.dbFactory, af.broker)
 	af.apps[app.Name()] = app
+	return af
 }
 
 func (af *ApplicationFactory) DbFactory() database.DbFactory {
