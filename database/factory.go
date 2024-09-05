@@ -1,19 +1,21 @@
 package database
 
-import "github.com/thumperq/golib/config"
+import (
+	"reflect"
 
-type DbService interface {
-	Name() string
-}
+	"github.com/thumperq/golib/config"
+)
+
+var Factory DbFactory
 
 type DbFactory interface {
-	Register(newDb func(...any) DbService) DbFactory
-	Get(name string) DbService
+	Register(newDb func(*PgDB) any) DbFactory
+	Get(name reflect.Type) any
 }
 
 type DBFactory struct {
 	pgDb *PgDB
-	dbs  map[string]DbService
+	dbs  map[reflect.Type]any
 }
 
 func NewDBFactory(cfg config.CfgManager) (DbFactory, error) {
@@ -23,16 +25,20 @@ func NewDBFactory(cfg config.CfgManager) (DbFactory, error) {
 	}
 	return &DBFactory{
 		pgDb: pgDb,
-		dbs:  make(map[string]DbService),
+		dbs:  make(map[reflect.Type]any),
 	}, nil
 }
 
-func (dbf *DBFactory) Register(newDb func(...any) DbService) DbFactory {
+func (dbf *DBFactory) Register(newDb func(pgDb *PgDB) any) DbFactory {
 	db := newDb(dbf.pgDb)
-	dbf.dbs[db.Name()] = db
+	dbf.dbs[reflect.TypeOf(db)] = db
 	return dbf
 }
 
-func (dbf *DBFactory) Get(name string) DbService {
-	return dbf.dbs[name]
+func (dbf *DBFactory) Get(typ reflect.Type) any {
+	return dbf.dbs[typ]
+}
+
+func GetRepo[T any]() T {
+	return Factory.Get(reflect.TypeFor[T]()).(T)
 }
