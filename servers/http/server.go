@@ -69,7 +69,7 @@ func (srv *ApiServer) Stop() int {
 	return 1
 }
 
-func ListenAndServe(callback func(*ApiServer)) <-chan int {
+func ListenAndServe(callback func(*ApiServer) error) <-chan int {
 	var httpPort uint16 = 8080
 	exitCode := make(chan int, 1)
 	apiServer := ApiServer{
@@ -81,7 +81,12 @@ func ListenAndServe(callback func(*ApiServer)) <-chan int {
 		close(exitCode)
 		return exitCode
 	}
-	callback(&apiServer)
+	err = callback(&apiServer)
+	if err != nil {
+		exitCode <- 1
+		close(exitCode)
+		return exitCode
+	}
 	err = apiServer.Start()
 	if err != nil {
 		exitCode <- 1
