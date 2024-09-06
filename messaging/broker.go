@@ -24,10 +24,10 @@ type Message struct {
 
 type Broker struct {
 	urls       string
-	Connection *nats.Conn
-	Stream     nats.JetStreamContext
-	Domain     string
-	Service    string
+	connection *nats.Conn
+	stream     nats.JetStreamContext
+	domain     string
+	service    string
 }
 
 func NewBroker(cfg config.CfgManager, domain string, service string) (*Broker, error) {
@@ -43,8 +43,8 @@ func NewBroker(cfg config.CfgManager, domain string, service string) (*Broker, e
 	}
 	return &Broker{
 		urls:    urls,
-		Domain:  domain,
-		Service: service,
+		domain:  domain,
+		service: service,
 	}, nil
 }
 
@@ -54,21 +54,21 @@ func (b *Broker) WithStream(topics []string) error {
 	}
 	domainTopics := []string{}
 	for _, t := range topics {
-		domainTopics = append(domainTopics, fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, t))
+		domainTopics = append(domainTopics, fmt.Sprintf("%s.%s.%s", b.domain, b.service, t))
 	}
-	if b.Connection == nil {
+	if b.connection == nil {
 		err := b.Connect()
 		if err != nil {
 			return err
 		}
 	}
-	js, err := b.Connection.JetStream(nats.PublishAsyncMaxPending(256))
+	js, err := b.connection.JetStream(nats.PublishAsyncMaxPending(256))
 	if err != nil {
 		return err
 	}
-	b.Stream = js
-	_, err = b.Stream.AddStream(&nats.StreamConfig{
-		Name:     fmt.Sprintf("%s-%s", b.Domain, b.Service),
+	b.stream = js
+	_, err = b.stream.AddStream(&nats.StreamConfig{
+		Name:     fmt.Sprintf("%s-%s", b.domain, b.service),
 		Subjects: domainTopics,
 	})
 	if err != nil {
@@ -82,12 +82,12 @@ func (b *Broker) Connect() error {
 	if err != nil {
 		return err
 	}
-	b.Connection = nc
+	b.connection = nc
 	return nil
 }
 
 func (b *Broker) Disconnect() error {
-	return b.Connection.Drain()
+	return b.connection.Drain()
 }
 
 func (b *Broker) Publish(topic string, data Event) error {
@@ -109,7 +109,7 @@ func (b *Broker) Publish(topic string, data Event) error {
 	if err != nil {
 		return err
 	}
-	return b.Connection.Publish(fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, topic), msgJson)
+	return b.connection.Publish(fmt.Sprintf("%s.%s.%s", b.domain, b.service, topic), msgJson)
 }
 
 func (b *Broker) PublishStream(topic string, data Event) error {
@@ -131,7 +131,7 @@ func (b *Broker) PublishStream(topic string, data Event) error {
 	if err != nil {
 		return err
 	}
-	_, err = b.Stream.Publish(fmt.Sprintf("%s.%s.%s", b.Domain, b.Service, topic), msgJson)
+	_, err = b.stream.Publish(fmt.Sprintf("%s.%s.%s", b.domain, b.service, topic), msgJson)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ type Subscriber struct {
 
 func NewSubscriber(broker *Broker) *Subscriber {
 	return &Subscriber{
-		subscriberName: fmt.Sprintf("%s-%s", broker.Domain, broker.Service),
+		subscriberName: fmt.Sprintf("%s-%s", broker.domain, broker.service),
 		broker:         broker,
 	}
 }
@@ -154,7 +154,7 @@ func (s *Subscriber) Subscribe(ctx context.Context, domain string, service strin
 	msgs := make(chan *nats.Msg)
 	subject := fmt.Sprintf("%s.%s.%s", domain, service, topic)
 	queueName := fmt.Sprintf("%s-%s", s.subscriberName, strings.ReplaceAll(subject, ".", "-"))
-	sub, err := s.broker.Connection.QueueSubscribeSyncWithChan(subject, queueName, msgs)
+	sub, err := s.broker.connection.QueueSubscribeSyncWithChan(subject, queueName, msgs)
 	if err != nil {
 		return err
 	}
@@ -193,7 +193,7 @@ func (s *Subscriber) Subscribe(ctx context.Context, domain string, service strin
 func (s *Subscriber) SubscribeStream(ctx context.Context, domain string, service string, topic string, handler func(ctx context.Context, msg Message) error) error {
 	subject := fmt.Sprintf("%s.%s.%s", domain, service, topic)
 	queueName := fmt.Sprintf("%s-%s", s.subscriberName, strings.ReplaceAll(subject, ".", "-"))
-	sub, err := s.broker.Stream.PullSubscribe(subject, queueName, nats.PullMaxWaiting(128))
+	sub, err := s.broker.stream.PullSubscribe(subject, queueName, nats.PullMaxWaiting(128))
 	if err != nil {
 		return err
 	}

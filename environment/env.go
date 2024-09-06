@@ -44,7 +44,7 @@ func NewEnv() (*Env, error) {
 		return nil, err
 	}
 
-	appFactory := application.NewApplicationFactory(broker, cfg)
+	appFactory := application.NewApplicationFactory()
 
 	return &Env{
 		Broker:     broker,
