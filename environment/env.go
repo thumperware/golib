@@ -17,6 +17,7 @@ var appFactory application.AppFactory
 var dbFactory database.DbFactory
 
 type Env struct {
+	providers  []func(*Env) error
 	Broker     *messaging.Broker
 	AppFactory application.AppFactory
 	DbFactory  database.DbFactory
@@ -29,29 +30,45 @@ func NewEnv() (*Env, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	dbFactory, err := database.NewDBFactory(cfg)
-	if err != nil {
-		return nil, err
-	}
-
-	domain := os.Getenv("DOMAIN")
-	service := os.Getenv("SERVICE")
-
-	broker, err := messaging.NewBroker(cfg, domain, service)
-
-	if err != nil {
-		return nil, err
-	}
-
-	appFactory := application.NewApplicationFactory()
-
 	return &Env{
-		Broker:     broker,
-		AppFactory: appFactory,
-		DbFactory:  dbFactory,
-		Cfg:        cfg,
+		Cfg: cfg,
 	}, nil
+}
+
+func (env *Env) WithBroker() *Env {
+	env.providers = append(env.providers, func(env *Env) error {
+		domain := os.Getenv("DOMAIN")
+		service := os.Getenv("SERVICE")
+		broker, err := messaging.NewBroker(env.Cfg, domain, service)
+		if err != nil {
+			return err
+		}
+		env.Broker = broker
+		return nil
+	})
+	return env
+}
+
+func (env *Env) WithDbFactory() *Env {
+	env.providers = append(env.providers, func(env *Env) error {
+		dbf, err := database.NewDBFactory(env.Cfg)
+		if err != nil {
+			return err
+		}
+		dbFactory = dbf
+		env.DbFactory = dbFactory
+		return nil
+	})
+	return env
+}
+
+func (env *Env) WithAppFactory() *Env {
+	env.providers = append(env.providers, func(env *Env) error {
+		appFactory = application.NewApplicationFactory()
+		env.AppFactory = appFactory
+		return nil
+	})
+	return env
 }
 
 func (env *Env) Bootstrap(b func(env *Env, apiSrv *httpserver.ApiServer) error) error {
