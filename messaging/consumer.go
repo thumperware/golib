@@ -6,21 +6,21 @@ type Consumer interface {
 	Handle(ctx context.Context, msg Message) error
 }
 
-type ConsumerWorker interface {
-	Consume(consumer Consumer) func(ctx context.Context, domain string, service string, topic string) error
+type Worker interface {
+	Run(consumer Consumer) func(ctx context.Context, domain string, service string, topic string) error
 }
 
-type consumerWorker struct {
+type worker struct {
 	broker *Broker
 }
 
-func NewConsumerWorker(broker *Broker) ConsumerWorker {
-	return &consumerWorker{
+func NewWorker(broker *Broker) Worker {
+	return &worker{
 		broker: broker,
 	}
 }
 
-func (cw *consumerWorker) Consume(consumer Consumer) func(ctx context.Context, domain string, service string, topic string) error {
+func (cw *worker) Run(consumer Consumer) func(ctx context.Context, domain string, service string, topic string) error {
 	return func(ctx context.Context, domain string, service string, topic string) error {
 		return NewSubscriber(cw.broker).
 			Subscribe(ctx, domain, service, topic, consumer.Handle)

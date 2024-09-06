@@ -23,7 +23,7 @@ type Env struct {
 	Broker     *messaging.Broker
 	AppFactory application.AppFactory
 	DbFactory  database.DbFactory
-	Worker     messaging.ConsumerWorker
+	Worker     messaging.Worker
 }
 
 func NewEnv() *Env {
@@ -85,9 +85,9 @@ func (env *Env) WithAppFactory() *Env {
 	return env
 }
 
-func (env *Env) WithConsumerWorker() *Env {
+func (env *Env) WithWorker() *Env {
 	env.providers = append(env.providers, func(env *Env) error {
-		cw := messaging.NewConsumerWorker(env.Broker)
+		cw := messaging.NewWorker(env.Broker)
 		env.Worker = cw
 		return nil
 	})
