@@ -12,6 +12,8 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type ApiServer struct {
@@ -30,6 +32,10 @@ func (srv *ApiServer) Initialize() error {
 			"status": "ok",
 		})
 	})
+
+	srv.Engine.StaticFile("/docs/openapi.yaml", "../api/openapi.yaml")
+	url := ginSwagger.URL("/docs/openapi.yaml")
+	srv.Engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
 
 	config := cors.DefaultConfig()
 	config.AllowOrigins = []string{"*"} //  we should adjust it in production env
