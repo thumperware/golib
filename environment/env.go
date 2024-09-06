@@ -24,15 +24,23 @@ type Env struct {
 	Cfg        config.CfgManager
 }
 
-func NewEnv() (*Env, error) {
+func NewEnv() *Env {
 	logging.SetupLogging()
-	cfg, err := config.NewConfigManager()
-	if err != nil {
-		return nil, err
-	}
-	return &Env{
-		Cfg: cfg,
-	}, nil
+	env := &Env{}
+	env.withConfig()
+	return env
+}
+
+func (env *Env) withConfig() *Env {
+	env.providers = append(env.providers, func(env *Env) error {
+		cfg, err := config.NewConfigManager()
+		if err != nil {
+			return err
+		}
+		env.Cfg = cfg
+		return nil
+	})
+	return env
 }
 
 func (env *Env) WithBroker() *Env {
