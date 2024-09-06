@@ -16,34 +16,34 @@ type AppFactory interface {
 	Get(typ reflect.Type) any
 }
 
-type ApplicationFactory struct {
+type appFactory struct {
 	broker *messaging.Broker
 	cfg    config.CfgManager
 	apps   map[reflect.Type]any
 }
 
 func NewApplicationFactory(broker *messaging.Broker, cfg config.CfgManager) AppFactory {
-	return &ApplicationFactory{
+	return &appFactory{
 		broker: broker,
 		cfg:    cfg,
 	}
 }
 
-func (af *ApplicationFactory) Register(newApp func(AppFactory) any) AppFactory {
+func (af *appFactory) Register(newApp func(AppFactory) any) AppFactory {
 	app := newApp(af)
 	af.apps[reflect.TypeOf(app)] = app
 	return af
 }
 
-func (af *ApplicationFactory) Broker() *messaging.Broker {
+func (af *appFactory) Broker() *messaging.Broker {
 	return af.broker
 }
 
-func (af *ApplicationFactory) Config() config.CfgManager {
+func (af *appFactory) Config() config.CfgManager {
 	return af.cfg
 }
 
-func (af *ApplicationFactory) Get(typ reflect.Type) any {
+func (af *appFactory) Get(typ reflect.Type) any {
 	return af.apps[typ]
 }
 

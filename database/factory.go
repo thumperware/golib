@@ -14,7 +14,7 @@ type DbFactory interface {
 	Get(name reflect.Type) any
 }
 
-type DBFactory struct {
+type dbFactory struct {
 	pgDb *PgDB
 	dbs  map[reflect.Type]any
 }
@@ -24,23 +24,23 @@ func NewDBFactory(cfg config.CfgManager) (DbFactory, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DBFactory{
+	return &dbFactory{
 		pgDb: pgDb,
 		dbs:  make(map[reflect.Type]any),
 	}, nil
 }
 
-func (dbf *DBFactory) Register(newDb func(DbFactory) any) DbFactory {
+func (dbf *dbFactory) Register(newDb func(DbFactory) any) DbFactory {
 	db := newDb(dbf)
 	dbf.dbs[reflect.TypeOf(db)] = db
 	return dbf
 }
 
-func (dbf *DBFactory) PgDb() *PgDB {
+func (dbf *dbFactory) PgDb() *PgDB {
 	return dbf.pgDb
 }
 
-func (dbf *DBFactory) Get(typ reflect.Type) any {
+func (dbf *dbFactory) Get(typ reflect.Type) any {
 	return dbf.dbs[typ]
 }
 
