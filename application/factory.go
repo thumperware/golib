@@ -10,7 +10,7 @@ import (
 var Factory AppFactory
 
 type AppFactory interface {
-	Register(newApp func() any) AppFactory
+	Register(newApp func(AppFactory) any) AppFactory
 	Broker() *messaging.Broker
 	Config() config.CfgManager
 	Get(typ reflect.Type) any
@@ -29,8 +29,8 @@ func NewApplicationFactory(broker *messaging.Broker, cfg config.CfgManager) AppF
 	}
 }
 
-func (af *ApplicationFactory) Register(newApp func() any) AppFactory {
-	app := newApp()
+func (af *ApplicationFactory) Register(newApp func(AppFactory) any) AppFactory {
+	app := newApp(af)
 	af.apps[reflect.TypeOf(app)] = app
 	return af
 }

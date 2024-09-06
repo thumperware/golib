@@ -9,7 +9,8 @@ import (
 var Factory DbFactory
 
 type DbFactory interface {
-	Register(newDb func(*PgDB) any) DbFactory
+	Register(newDb func(DbFactory) any) DbFactory
+	PgDb() *PgDB
 	Get(name reflect.Type) any
 }
 
@@ -29,10 +30,14 @@ func NewDBFactory(cfg config.CfgManager) (DbFactory, error) {
 	}, nil
 }
 
-func (dbf *DBFactory) Register(newDb func(pgDb *PgDB) any) DbFactory {
-	db := newDb(dbf.pgDb)
+func (dbf *DBFactory) Register(newDb func(DbFactory) any) DbFactory {
+	db := newDb(dbf)
 	dbf.dbs[reflect.TypeOf(db)] = db
 	return dbf
+}
+
+func (dbf *DBFactory) PgDb() *PgDB {
+	return dbf.pgDb
 }
 
 func (dbf *DBFactory) Get(typ reflect.Type) any {
