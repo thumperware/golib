@@ -17,12 +17,13 @@ var appFactory application.AppFactory
 var dbFactory database.DbFactory
 
 type Env struct {
-	providers  []func(*Env) error
-	ApiServer  *httpserver.ApiServer
-	Broker     *messaging.Broker
-	AppFactory application.AppFactory
-	DbFactory  database.DbFactory
-	Cfg        config.CfgManager
+	providers      []func(*Env) error
+	Cfg            config.CfgManager
+	ApiServer      *httpserver.ApiServer
+	Broker         *messaging.Broker
+	AppFactory     application.AppFactory
+	DbFactory      database.DbFactory
+	ConsumerWorker messaging.ConsumerWorker
 }
 
 func NewEnv() *Env {
@@ -77,8 +78,17 @@ func (env *Env) WithDbFactory() *Env {
 
 func (env *Env) WithAppFactory() *Env {
 	env.providers = append(env.providers, func(env *Env) error {
-		appFactory = application.NewApplicationFactory()
+		appFactory = application.NewAppFactory()
 		env.AppFactory = appFactory
+		return nil
+	})
+	return env
+}
+
+func (env *Env) WithConsumerWorker() *Env {
+	env.providers = append(env.providers, func(env *Env) error {
+		cw := messaging.NewConsumerWorker(env.Broker)
+		env.ConsumerWorker = cw
 		return nil
 	})
 	return env

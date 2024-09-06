@@ -13,7 +13,7 @@ type appFactory struct {
 	apps map[reflect.Type]any
 }
 
-func NewApplicationFactory() AppFactory {
+func NewAppFactory() AppFactory {
 	return &appFactory{
 		apps: make(map[reflect.Type]any),
 	}
