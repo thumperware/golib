@@ -6,8 +6,6 @@ import (
 	"github.com/thumperq/golib/config"
 )
 
-var Factory DbFactory
-
 type DbFactory interface {
 	Register(newDb func(DbFactory) any) DbFactory
 	PgDb() *PgDB
@@ -42,8 +40,4 @@ func (dbf *dbFactory) PgDb() *PgDB {
 
 func (dbf *dbFactory) Get(typ reflect.Type) any {
 	return dbf.dbs[typ]
-}
-
-func GetRepo[T any]() T {
-	return Factory.Get(reflect.TypeFor[T]()).(T)
 }

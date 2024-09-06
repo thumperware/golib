@@ -3,6 +3,7 @@ package environment
 import (
 	"context"
 	"os"
+	"reflect"
 
 	"github.com/thumperq/golib/application"
 	"github.com/thumperq/golib/config"
@@ -11,6 +12,9 @@ import (
 	"github.com/thumperq/golib/messaging"
 	httpserver "github.com/thumperq/golib/servers/http"
 )
+
+var appFactory application.AppFactory
+var dbFactory database.DbFactory
 
 type Env struct {
 	broker     *messaging.Broker
@@ -31,8 +35,6 @@ func NewEnv() (*Env, error) {
 		return nil, err
 	}
 
-	database.Factory = dbFactory
-
 	domain := os.Getenv("DOMAIN")
 	service := os.Getenv("SERVICE")
 
@@ -43,8 +45,6 @@ func NewEnv() (*Env, error) {
 	}
 
 	appFactory := application.NewApplicationFactory(broker, cfg)
-
-	application.Factory = appFactory
 
 	return &Env{
 		broker:     broker,
@@ -66,4 +66,12 @@ func (env *Env) Bootstrap(b func(env *Env, apiSrv *httpserver.ApiServer) error) 
 	}
 	os.Exit(exitCode)
 	return err
+}
+
+func GetApp[T any]() T {
+	return appFactory.Get(reflect.TypeFor[T]()).(T)
+}
+
+func GetRepo[T any]() T {
+	return dbFactory.Get(reflect.TypeFor[T]()).(T)
 }

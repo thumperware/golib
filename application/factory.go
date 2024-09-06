@@ -7,8 +7,6 @@ import (
 	"github.com/thumperq/golib/messaging"
 )
 
-var Factory AppFactory
-
 type AppFactory interface {
 	Register(newApp func(AppFactory) any) AppFactory
 	Broker() *messaging.Broker
@@ -45,8 +43,4 @@ func (af *appFactory) Config() config.CfgManager {
 
 func (af *appFactory) Get(typ reflect.Type) any {
 	return af.apps[typ]
-}
-
-func GetApp[T any]() T {
-	return Factory.Get(reflect.TypeFor[T]()).(T)
 }
