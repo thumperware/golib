@@ -55,10 +55,14 @@ func NewEnv() (*Env, error) {
 }
 
 func (env *Env) Bootstrap(b func(env *Env, apiSrv *httpserver.ApiServer) error) error {
+	err := env.Broker.Connect()
+	if err != nil {
+		return err
+	}
 	exitCode := <-httpserver.ListenAndServe(func(as *httpserver.ApiServer) error {
 		return b(env, as)
 	})
-	err := env.Broker.Disconnect()
+	err = env.Broker.Disconnect()
 	if err != nil {
 		logging.TraceLogger(context.Background()).
 			Err(err).
