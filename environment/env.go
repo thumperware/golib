@@ -42,7 +42,7 @@ func NewEnv() (*Env, error) {
 		return nil, err
 	}
 
-	appFactory := application.NewApplicationFactory(dbFactory, broker, cfg)
+	appFactory := application.NewApplicationFactory(broker, cfg)
 
 	application.Factory = appFactory
 
