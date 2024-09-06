@@ -44,6 +44,10 @@ func (env *Env) WithBroker() *Env {
 			return err
 		}
 		env.Broker = broker
+		err = env.Broker.Connect()
+		if err != nil {
+			return err
+		}
 		return nil
 	})
 	return env
@@ -72,14 +76,16 @@ func (env *Env) WithAppFactory() *Env {
 }
 
 func (env *Env) Bootstrap(b func(env *Env, apiSrv *httpserver.ApiServer) error) error {
-	err := env.Broker.Connect()
-	if err != nil {
-		return err
+	for _, provider := range env.providers {
+		err := provider(env)
+		if err != nil {
+			return err
+		}
 	}
 	exitCode := <-httpserver.ListenAndServe(func(as *httpserver.ApiServer) error {
 		return b(env, as)
 	})
-	err = env.Broker.Disconnect()
+	err := env.Broker.Disconnect()
 	if err != nil {
 		logging.TraceLogger(context.Background()).
 			Err(err).
