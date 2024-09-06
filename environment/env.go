@@ -18,6 +18,7 @@ var dbFactory database.DbFactory
 
 type Env struct {
 	providers  []func(*Env) error
+	ApiServer  *httpserver.ApiServer
 	Broker     *messaging.Broker
 	AppFactory application.AppFactory
 	DbFactory  database.DbFactory
@@ -83,15 +84,16 @@ func (env *Env) WithAppFactory() *Env {
 	return env
 }
 
-func (env *Env) Bootstrap(b func(env *Env, apiSrv *httpserver.ApiServer) error) error {
+func (env *Env) Bootstrap(b func(env *Env) error) error {
 	for _, provider := range env.providers {
 		err := provider(env)
 		if err != nil {
 			return err
 		}
 	}
-	exitCode := <-httpserver.ListenAndServe(func(as *httpserver.ApiServer) error {
-		return b(env, as)
+	exitCode := <-httpserver.ListenAndServe(func(apiSrv *httpserver.ApiServer) error {
+		env.ApiServer = apiSrv
+		return b(env)
 	})
 	err := env.Broker.Disconnect()
 	if err != nil {
