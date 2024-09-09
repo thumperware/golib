@@ -30,7 +30,7 @@ func ShouldBindJson[T any](r *http.Request, v T) error {
 
 func Json[T any](status int, w http.ResponseWriter, v T) error {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
+	Status(status, w)
 	err := json.NewEncoder(w).Encode(v)
 	if err != nil {
 		return err
