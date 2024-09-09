@@ -7,6 +7,8 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
+type H map[string]any
+
 func BindJson[T any](r *http.Request, v T) error {
 	err := json.NewDecoder(r.Body).Decode(v)
 	if err != nil {
