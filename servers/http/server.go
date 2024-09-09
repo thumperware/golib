@@ -10,38 +10,47 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
-	swaggerFiles "github.com/swaggo/files"
-	ginSwagger "github.com/swaggo/gin-swagger"
+	"github.com/rs/cors"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 type ApiServer struct {
 	HttpPort   uint16
-	Engine     *gin.Engine
+	Engine     *http.ServeMux
 	interrupt  chan os.Signal
 	httpServer *http.Server
 }
 
 func (srv *ApiServer) Initialize() error {
-	srv.Engine = gin.New()
+	srv.Engine = http.NewServeMux()
 	domain := os.Getenv("DOMAIN")
 	service := os.Getenv("SERVICE")
-	srv.Engine.GET(fmt.Sprintf("/%s/%s/health-check", domain, service), func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
+	srv.Engine.HandleFunc(fmt.Sprintf("GET /%s/%s/health-check", domain, service), func(w http.ResponseWriter, r *http.Request) {
+		Json(http.StatusOK, w, H{
 			"status": "ok",
 		})
 	})
 
-	srv.Engine.StaticFile("/docs/openapi.yaml", "../api/openapi.yaml")
-	url := ginSwagger.URL("/docs/openapi.yaml")
-	srv.Engine.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
+	// Serve the OpenAPI spec at /openapi.yaml
+	srv.Engine.HandleFunc("/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "../api/openapi.yaml")
+	})
 
-	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"*"} //  we should adjust it in production env
-	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"}
-	config.AllowHeaders = []string{"Authorization", "Content-Type"}
-	srv.Engine.Use(cors.New(config))
+	// Serve Swagger UI at /swagger/
+	srv.Engine.Handle("/swagger/", httpSwagger.Handler(
+		httpSwagger.URL("/openapi.yaml"), // The URL where the OpenAPI YAML file is served
+	))
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowCredentials: true,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		// Enable Debugging for testing, consider disabling in production
+		// Debug: true,
+	})
+
+	c.Handler(srv.Engine)
 
 	srv.interrupt = make(chan os.Signal, 1)
 	signal.Notify(srv.interrupt, os.Interrupt, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
