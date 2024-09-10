@@ -26,9 +26,7 @@ func (srv *ApiServer) initialize() error {
 	domain := os.Getenv("DOMAIN")
 	service := os.Getenv("SERVICE")
 	srv.Engine.HandleFunc(fmt.Sprintf("GET /%s/%s/health-check", domain, service), func(w http.ResponseWriter, r *http.Request) {
-		Json(http.StatusOK, w, H{
-			"status": "ok",
-		})
+		Status(http.StatusOK, w)
 	})
 
 	// Serve the OpenAPI spec at /openapi.yaml
