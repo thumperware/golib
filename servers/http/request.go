@@ -43,5 +43,3 @@ func Json[T any](status int, w http.ResponseWriter, v T) error {
 func Status(status int, w http.ResponseWriter) {
 	w.WriteHeader(status)
 }
-
-func GroupRoutes(enging *http.ServeMux)

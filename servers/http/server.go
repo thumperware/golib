@@ -21,7 +21,7 @@ type ApiServer struct {
 	httpServer *http.Server
 }
 
-func (srv *ApiServer) Initialize() error {
+func (srv *ApiServer) initialize() error {
 	srv.Engine = http.NewServeMux()
 	domain := os.Getenv("DOMAIN")
 	service := os.Getenv("SERVICE")
@@ -57,7 +57,7 @@ func (srv *ApiServer) Initialize() error {
 	return nil
 }
 
-func (srv *ApiServer) Start() error {
+func (srv *ApiServer) start() error {
 	srv.httpServer = &http.Server{
 		Handler:           srv.Engine,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -74,7 +74,7 @@ func (srv *ApiServer) Start() error {
 	return nil
 }
 
-func (srv *ApiServer) Stop() int {
+func (srv *ApiServer) stop() int {
 	<-srv.interrupt
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -90,7 +90,7 @@ func ListenAndServe(callback func(*ApiServer) error) <-chan int {
 	apiServer := ApiServer{
 		HttpPort: httpPort,
 	}
-	err := apiServer.Initialize()
+	err := apiServer.initialize()
 	if err != nil {
 		exitCode <- 1
 		close(exitCode)
@@ -102,14 +102,14 @@ func ListenAndServe(callback func(*ApiServer) error) <-chan int {
 		close(exitCode)
 		return exitCode
 	}
-	err = apiServer.Start()
+	err = apiServer.start()
 	if err != nil {
 		exitCode <- 1
 		close(exitCode)
 		return exitCode
 	}
 	go func() {
-		exitCode <- apiServer.Stop()
+		exitCode <- apiServer.stop()
 		close(exitCode)
 	}()
 	return exitCode
